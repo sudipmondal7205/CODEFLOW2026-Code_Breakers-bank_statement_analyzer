@@ -10,6 +10,8 @@ cohere==5.5.0
 colorama==0.4.6
 dotenv==0.9.9
 fastapi==0.136.1
+google-auth==2.40.3
+PyJWT==2.10.1
 fastavro==1.12.2
 filelock==3.29.0
 fsspec==2026.4.0
@@ -25,6 +27,7 @@ numpy==2.4.6
 packaging==26.2
 pandas==3.0.3
 pip==26.1.1
+pymongo==4.12.1
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dateutil==2.9.0.post0
@@ -45,3 +48,5 @@ typing-inspection==0.4.2
 tzdata==2026.2
 urllib3==2.7.0
 uvicorn==0.47.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1

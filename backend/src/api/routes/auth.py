@@ -1,65 +1,29 @@
-# Session middleware required
-from fastapi import Request
-from starlette.responses import JSONResponse
-from authlib.integrations.starlette_client import OAuth
-from starlette.middleware.sessions import SessionMiddleware
-import os
-from fastapi import APIRouter
-from dotenv import load_dotenv
-from src.services.user_service import sync_user
-from src.schemas import UserResponse
-
-load_dotenv()
-
-
-oauth = OAuth()
+from fastapi import APIRouter, HTTPException, status
+from src.schemas import UserCreate, UserLogin, UserResponse, AuthResponse
+from src.services.user_service import register_new_user, authenticate_user
+from src.core.security import create_access_token
 
 router = APIRouter()
 
+@router.post("/register", response_model=UserResponse)
+def register(user_in: UserCreate):
+    """Register a new user."""
+    return register_new_user(user_in)
 
-oauth.register(
-    name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-
-    server_metadata_url=(
-        "https://accounts.google.com/.well-known/openid-configuration"
-    ),
-
-    client_kwargs={
-        "scope": "openid email profile"
-    }
-)
-
-
-@router.get("/")
-def home():
-    return {
-        "message":"Home page",
-        "login":"Go to /login"
-    }
-
-
-@router.get("/login")
-async def login(request: Request):
-    print("Initiating login, session currently is:", request.session)
-    redirect_uri = request.url_for("auth_callback")
-
-    return await oauth.google.authorize_redirect(
-        request,
-        str(redirect_uri)
+@router.post("/login", response_model=AuthResponse)
+def login(user_in: UserLogin):
+    """Authenticate a user and return a JWT access token."""
+    user = authenticate_user(user_in)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(subject=user["id"])
+    return AuthResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse(**user)
     )
-
-
-
-@router.get("/google/callback", response_model=UserResponse)
-async def auth_callback(request: Request):
-    print("Callback reached. Session contains:", request.session)
-    token = await oauth.google.authorize_access_token(
-        request
-    )
-
-    user = token.get("userinfo")
-    synced_user = sync_user(user)
-
-    return synced_user

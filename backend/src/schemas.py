@@ -4,9 +4,16 @@ from typing import List, Optional
 from datetime import datetime
 
 
-class GoogleLoginRequest(BaseModel):
-    id_token: str = Field(..., description="ID token from Google Sign-In (GIS / One Tap)")
+class UserCreate(BaseModel):
+    email: str = Field(..., description="User's email address")
+    password: str = Field(..., description="User's raw password")
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    full_name: Optional[str] = None
 
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -14,28 +21,11 @@ class AuthResponse(BaseModel):
     user: "UserResponse"
 
 
-class UserSyncRequest(BaseModel):
-    google_id: str
-    email: str
-    full_name: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    picture: Optional[str] = None
-    email_verified: Optional[bool] = None
-    locale: Optional[str] = None
 
-
-class UserSyncResponse(BaseModel):
-    id: str
-    email: str
-
-    class Config:
-        from_attributes = True
 
 
 class UserResponse(BaseModel):
     id: str
-    google_id: str
     email: str
     full_name: Optional[str] = None
     first_name: Optional[str] = None
