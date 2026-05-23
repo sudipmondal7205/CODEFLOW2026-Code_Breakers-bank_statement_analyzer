@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 from src.core.database import get_db
 from src.repositories.base_repository import BaseRepository
 
+
 class StatementRepository(BaseRepository):
     def __init__(self):
         super().__init__(get_db()["statements"])

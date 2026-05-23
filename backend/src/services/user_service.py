@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, Any, Optional
+from bson.objectid import ObjectId
 from src.repositories.user_repository import UserRepository
 
 class UserService:
@@ -49,7 +50,7 @@ class UserService:
         
         if user_doc:
             # User exists: Update profile details
-            updated_doc = self.user_repo.update_one({"_id": user_doc["_id"]}, update_fields)
+            updated_doc = self.user_repo.update_one({"_id": ObjectId(user_doc["id"])}, update_fields)
             print(f"Synced existing user via UserRepository: {email}")
         else:
             # New user: Create user document

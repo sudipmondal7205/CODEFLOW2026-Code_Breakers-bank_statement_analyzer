@@ -1,34 +1,40 @@
-import os
 import joblib
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from src.api.routes import auth as auth_routes
+from src.services.ai_advisor import generate_ai_insights
+from starlette.middleware.sessions import SessionMiddleware
+from src.core.database import init_db
+import os
 
-from src.pipeline import FinancialAnalyticsEngine
-from src.ai_advisor import generate_ai_insights
+load_dotenv()
 
 app = FastAPI(title="Bank Statement NLP Engine", version="1.0")
 
 
+@app.on_event("startup")
+def startup():
+    init_db()
+
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY")
 )
 
+app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 
-MODEL_PATH = os.path.join("backend", "models", "transaction_categorizer.pkl")
-classifier_pipeline = joblib.load(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
+
+
 
 @app.post("/api/analyze")
-async def analyze_statement(file: UploadFile = File(...)):
+def analyze_statement(file: UploadFile = File(...)):
     """
     Inbound multipart ingestion handler.
     """
     if not file.filename.endswith(('.pdf', '.csv', '.txt')):
         raise HTTPException(status_code=400, detail="Invalid extension format. Provide a standard document.")
-
 
     mock_scanned_rows = [
         {"raw_narration": "NEFT/SALARY/CORP", "clean_merchant": "INFOSYS TECH", "amount": 85000.0, "transaction_type": "credit"},
@@ -48,10 +54,9 @@ async def analyze_statement(file: UploadFile = File(...)):
         else:
             row["category"] = "Shopping"
 
-  
     analytical_metrics = FinancialAnalyticsEngine.calculate_core_metrics(mock_scanned_rows)
     anomaly_metrics = FinancialAnalyticsEngine.detect_anomalies(mock_scanned_rows)
-    
+
     ai_advisory_insights = generate_ai_insights(analytical_metrics["summary"], anomaly_metrics)
 
     return {
@@ -63,6 +68,7 @@ async def analyze_statement(file: UploadFile = File(...)):
         "ai_analysis": ai_advisory_insights
     }
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)

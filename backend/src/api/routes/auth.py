@@ -6,6 +6,8 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 from fastapi import APIRouter
 from dotenv import load_dotenv
+from src.services.user_service import sync_user
+from src.schemas import UserResponse
 
 load_dotenv()
 
@@ -40,29 +42,24 @@ def home():
 
 @router.get("/login")
 async def login(request: Request):
-    print("Hello!!!")
-    redirect_uri = request.url_for(
-        "auth_callback"
-    )
+    print("Initiating login, session currently is:", request.session)
+    redirect_uri = request.url_for("auth_callback")
 
     return await oauth.google.authorize_redirect(
         request,
-        redirect_uri
+        str(redirect_uri)
     )
 
 
 
-@router.get("/google/callback")
+@router.get("/google/callback", response_model=UserResponse)
 async def auth_callback(request: Request):
-
+    print("Callback reached. Session contains:", request.session)
     token = await oauth.google.authorize_access_token(
         request
     )
 
     user = token.get("userinfo")
+    synced_user = sync_user(user)
 
-    return JSONResponse({
-        "name": user["name"],
-        "email": user["email"],
-        "picture": user["picture"]
-    })
+    return synced_user
