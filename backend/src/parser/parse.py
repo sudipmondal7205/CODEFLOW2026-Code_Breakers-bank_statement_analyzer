@@ -1,6 +1,7 @@
+import os
 from typing import List
-
-from langchain_community.document_loaders import PyPDFLoader
+# pyrefly: ignore [missing-import]
+from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader
 from pydantic import BaseModel, Field
 
 from src.core.llm import model
@@ -19,15 +20,23 @@ class TableData(BaseModel):
 
 
 def get_file(path):
-    loader = PyPDFLoader(path)
+    ext = os.path.splitext(path)[1].lower()
+    
+    if ext == '.pdf':
+        loader = PyPDFLoader(path)
+    elif ext == '.csv':
+        loader = CSVLoader(path)
+    else:
+        loader = TextLoader(path, encoding='utf-8')
+        
     docs = loader.load()
 
-    pdf_text = "\n".join(doc.page_content for doc in docs)
+    file_text = "\n".join(doc.page_content for doc in docs)
 
     structured_llm = model.with_structured_output(TableData)
 
     prompt = f"""
-    Extract table data from the PDF text.
+    Extract table data from the document text.
 
     Rules:
 
@@ -38,9 +47,9 @@ def get_file(path):
     5. Ignore unrelated text
     6. Extract only table content
 
-    PDF:
+    Document:
 
-    {pdf_text}
+    {file_text}
     """
 
     result = structured_llm.invoke(prompt)

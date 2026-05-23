@@ -1,24 +1,31 @@
 import os
+# pyrefly: ignore [missing-import]
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 from typing import Any, Union
+from fastapi import Depends, HTTPException, status
+# pyrefly: ignore [missing-import]
+from fastapi.security import OAuth2PasswordBearer
+from jwt.exceptions import InvalidTokenError
 
-# JWT configuration
+
 SECRET_KEY = os.getenv("JWT_SECRET", "default_secret_key_if_not_set")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 30000
+
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against a hashed password."""
-    # bcrypt expects bytes
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
 
 def get_password_hash(password: str) -> str:
     """Generates a hash from a plain password."""
-    # bcrypt generates bytes, we decode to string for db storage
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     """Creates a JWT access token for the given subject (usually user ID)."""
@@ -30,3 +37,22 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+    """Dependency to extract and validate the JWT token, returning the user ID."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except InvalidTokenError:
+        raise credentials_exception
+    
+    return user_id

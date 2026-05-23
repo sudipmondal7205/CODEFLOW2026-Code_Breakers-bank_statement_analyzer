@@ -26,8 +26,7 @@ def init_db():
     db = client[MONGODB_DATABASE]
     users_collection = db["users"]
 
-    # Ensure unique indexes exist on users collection
-    users_collection.create_index("google_id", unique=True)
+
     users_collection.create_index("email", unique=True)
     print("Database connected and unique indexes for 'users' created/ensured successfully.")
 
