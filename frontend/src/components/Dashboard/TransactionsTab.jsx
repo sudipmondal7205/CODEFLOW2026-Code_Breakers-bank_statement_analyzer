@@ -308,7 +308,7 @@ export default function TransactionsTab({
                         {isDebit ? "-" : "+"}{currency}{amtVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="td-balance text-right text-muted">
-                        {currency}{t.balance ? t.balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}
+                        {t.balance && typeof t.balance === 'string' ? t.balance : `${currency}${t.balance ? t.balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}`}
                       </td>
                     </tr>
                   );

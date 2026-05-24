@@ -1,10 +1,10 @@
 import React, { useState, useRef } from "react";
-import { UploadCloud, FileSpreadsheet, FileText, ChevronDown, CheckCircle, AlertCircle, Sparkles, Loader } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, FileText, ChevronDown, CheckCircle, AlertCircle, Sparkles, Loader, X } from "lucide-react";
 import { parseCSVStatement } from "../../utils/parser";
 import { MOCK_STATEMENTS } from "../../utils/mockData";
 import { mapBackendStatement } from "../../utils/api";
 
-export default function FileUpload({ onUploadComplete, onRealUpload }) {
+export default function FileUpload({ onUploadComplete, onRealUpload, onExit }) {
   const [bank, setBank] = useState("hdfc");
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +91,18 @@ export default function FileUpload({ onUploadComplete, onRealUpload }) {
   };
 
   return (
-    <div className="upload-container card glassmorphism animate-fade-in">
+    <div className="upload-container card glassmorphism animate-fade-in" style={{ position: "relative" }}>
+      {onExit && (
+        <button 
+          onClick={onExit} 
+          className="btn-icon-text" 
+          title="Back to Dashboard"
+          style={{ position: "absolute", top: "16px", right: "16px", background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", zIndex: 10 }}
+        >
+          <X size={16} />
+          <span style={{ fontSize: "0.85rem", fontWeight: "500" }}>Cancel</span>
+        </button>
+      )}
       <div className="upload-header">
         <div className="header-badge">
           <Sparkles size={16} className="text-accent" />
@@ -104,27 +115,6 @@ export default function FileUpload({ onUploadComplete, onRealUpload }) {
         </p>
       </div>
 
-      <div className="bank-selector-group">
-        <label htmlFor="bankSelect">Select Statement Issuer Bank</label>
-        <div className="custom-select-wrapper">
-          <select
-            id="bankSelect"
-            value={bank}
-            onChange={(e) => setBank(e.target.value)}
-            disabled={isUploading}
-          >
-            {bankOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={18} className="select-arrow" />
-        </div>
-        <p className="select-tip">
-          Selecting the correct bank ensures accurate OCR extraction parameters.
-        </p>
-      </div>
 
       <div
         className={`drag-drop-zone ${isDragging ? "dragging" : ""} ${error ? "has-error" : ""} ${isUploading ? "uploading" : ""}`}
@@ -182,49 +172,7 @@ export default function FileUpload({ onUploadComplete, onRealUpload }) {
         </div>
       )}
 
-      <div className="demo-section">
-        <div className="divider">
-          <span>OR LOAD PRE-LOADED DEMO STATEMENT</span>
-        </div>
-        <div className="demo-buttons-grid">
-          <button
-            type="button"
-            onClick={() => loadDemoData("chase")}
-            className="btn btn-demo"
-            title="Load Chase Bank Statement (USD)"
-            disabled={isUploading}
-          >
-            🇺🇸 Chase (USD)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadDemoData("hdfc")}
-            className="btn btn-demo"
-            title="Load HDFC Bank Statement (INR)"
-            disabled={isUploading}
-          >
-            🇮🇳 HDFC (INR)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadDemoData("icici")}
-            className="btn btn-demo"
-            title="Load ICICI Bank Statement (INR)"
-            disabled={isUploading}
-          >
-            🇮🇳 ICICI (INR)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadDemoData("sbi")}
-            className="btn btn-demo"
-            title="Load SBI Bank Statement (INR)"
-            disabled={isUploading}
-          >
-            🇮🇳 SBI (INR)
-          </button>
-        </div>
-      </div>
+
     </div>
   );
 }

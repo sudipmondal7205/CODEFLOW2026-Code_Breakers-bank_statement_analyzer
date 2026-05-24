@@ -8,7 +8,7 @@ import "./css/dashboard.css";
 
 // Utilities
 import { autoCategorize } from "./utils/categorizer";
-import { clearSession, getToken, apiUploadStatement, mapBackendStatement } from "./utils/api";
+import { clearSession, getToken, apiUploadStatement, mapBackendStatement, apiGetMonthlyAnalytics, apiGetAnalyticsMonths, apiGetTransactions, apiGetAiAnalysis } from "./utils/api";
 
 // Component Imports
 import Login from "./components/Auth/Login";
@@ -33,6 +33,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview"); // overview, transactions, analytics, insights
   const [statement, setStatement] = useState(null); // holds { transactions, bankName, currency, isPdf, ... }
   const [customCategories, setCustomCategories] = useState({});
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isFetchingAi, setIsFetchingAi] = useState(false);
   
   // OCR Simulation States
   const [isSimulating, setIsSimulating] = useState(false);
@@ -44,6 +46,7 @@ export default function App() {
     const token = getToken();
     if (savedUser && token) {
       setUser(JSON.parse(savedUser));
+      setIsInitializing(true);
       setIsAuthenticated(true);
     }
   }, []);
@@ -51,6 +54,7 @@ export default function App() {
   // Auth Handlers — receive real user object from API
   const handleLogin = (apiUser) => {
     setUser(apiUser);
+    setIsInitializing(true);
     setIsAuthenticated(true);
   };
 
@@ -74,8 +78,28 @@ export default function App() {
     try {
       const apiResp = await apiUploadStatement(file);
       const mapped = mapBackendStatement(apiResp, file.name, currency);
-      setStatement(mapped);
+      setStatement({...mapped});
       setActiveTab("overview");
+      
+      // Fetch AI analysis in the background for the newly uploaded statement
+      // The backend uses YYYY-MM format for months
+      const month = apiResp.upload_date 
+        ? apiResp.upload_date.substring(0, 7) 
+        : new Date().toISOString().substring(0, 7);
+        
+      setIsFetchingAi(true);
+      try {
+        const aiResp = await apiGetAiAnalysis(month, false);
+        if (aiResp && aiResp.ai_analysis) {
+          mapped.aiAnalysis = aiResp.ai_analysis;
+          setStatement({...mapped});
+        }
+      } catch (err) {
+        console.error("Failed to fetch AI analysis after upload", err);
+      } finally {
+        setIsFetchingAi(false);
+      }
+      
     } catch (err) {
       // FileUpload component will handle showing the error
       throw err;
@@ -135,6 +159,125 @@ export default function App() {
     setActiveTab("overview");
   };
 
+  const handleFetchMonthData = async (month) => {
+    try {
+      const apiResp = await apiGetMonthlyAnalytics(month);
+      const mapped = mapBackendStatement(apiResp, `Statement - ${month}`, statement ? statement.currency : "₹");
+      
+      try {
+        const allTxns = await apiGetTransactions();
+        const monthTxns = allTxns.filter(t => t.transaction_date && t.transaction_date.startsWith(month));
+        
+        if (monthTxns.length > 0) {
+          mapped.transactions = monthTxns.map(t => ({
+            id: t.id,
+            date: t.transaction_date.split("T")[0],
+            narration: t.raw_narration,
+            category: t.category,
+            credit: t.transaction_type === "credit" ? t.amount : 0,
+            debit: t.transaction_type === "debit" ? t.amount : 0,
+            balance: t.balance || null
+          }));
+        }
+      } catch (txErr) {
+        console.error("Failed to load real transactions", txErr);
+      }
+
+      // Set the statement right away so dashboard renders immediately
+      setStatement({...mapped});
+
+      // Fetch AI analysis in the background
+      setIsFetchingAi(true);
+      try {
+        const aiResp = await apiGetAiAnalysis(month, false);
+        if (aiResp && aiResp.ai_analysis) {
+          mapped.aiAnalysis = aiResp.ai_analysis;
+          setStatement({...mapped});
+        }
+      } catch (err) {
+        console.error("Failed to fetch AI analysis", err);
+      } finally {
+        setIsFetchingAi(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch month data", err);
+    }
+  };
+
+  const fetchInitialData = async () => {
+    try {
+      const months = await apiGetAnalyticsMonths();
+      if (months && months.length > 0) {
+            months.sort((a, b) => b.localeCompare(a));
+            const month = months[0];
+            const apiResp = await apiGetMonthlyAnalytics(month);
+            const mapped = mapBackendStatement(apiResp, `Statement - ${month}`, "₹");
+            
+            try {
+              const allTxns = await apiGetTransactions();
+              const monthTxns = allTxns.filter(t => t.transaction_date && t.transaction_date.startsWith(month));
+              if (monthTxns.length > 0) {
+                mapped.transactions = monthTxns.map(t => ({
+                  id: t.id,
+                  date: t.transaction_date.split("T")[0],
+                  narration: t.raw_narration,
+                  category: t.category,
+                  credit: t.transaction_type === "credit" ? t.amount : 0,
+                  debit: t.transaction_type === "debit" ? t.amount : 0,
+                  balance: t.balance || null
+                }));
+              }
+            } catch (txErr) {
+              console.error("Failed to load real transactions", txErr);
+            }
+            
+            // Set the statement right away so dashboard renders immediately
+            setStatement({...mapped});
+
+            // Fetch AI analysis in the background
+            setIsFetchingAi(true);
+            try {
+              const aiResp = await apiGetAiAnalysis(month, false);
+              if (aiResp && aiResp.ai_analysis) {
+                mapped.aiAnalysis = aiResp.ai_analysis;
+                setStatement({...mapped});
+              }
+            } catch (err) {
+              console.error("Failed to fetch initial AI analysis", err);
+            } finally {
+              setIsFetchingAi(false);
+            }
+          } else {
+            setStatement({
+              transactions: [],
+              bankName: "No Data",
+              currency: "₹",
+              accountNumber: "N/A",
+              accountType: "N/A",
+              metrics: { total_income: 0, total_expenses: 0 },
+              categoryBreakdown: [],
+            });
+          }
+    } catch (err) {
+      console.error("Failed to load initial data", err);
+      setStatement({
+        transactions: [],
+        bankName: "No Data",
+        currency: "₹",
+        accountNumber: "N/A",
+        accountType: "N/A",
+        metrics: { total_income: 0, total_expenses: 0 },
+        categoryBreakdown: [],
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && !statement) {
+      fetchInitialData().finally(() => setIsInitializing(false));
+    }
+  }, [isAuthenticated]);
+
   // Render Authentication Section
   if (!isAuthenticated) {
     return (
@@ -174,6 +317,18 @@ export default function App() {
     );
   }
 
+  // Render Loading Spinner if initializing
+  if (isInitializing) {
+    return (
+      <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+           <div className="uploading-spin" style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent)', borderRadius: '50%' }}></div>
+           <p style={{ color: 'var(--text-muted)' }}>Loading Dashboard...</p>
+         </div>
+      </div>
+    );
+  }
+
   // Render File Upload Prompt Section
   if (!statement) {
     return (
@@ -181,6 +336,7 @@ export default function App() {
         <FileUpload
           onUploadComplete={(res) => setStatement(res)}
           onRealUpload={handleRealUpload}
+          onExit={fetchInitialData}
         />
       </div>
     );
@@ -194,7 +350,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
         userEmail={user.email}
-        userName={user.name}
+        userName={user.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : user.name}
       />
 
       <main className="main-workspace">
@@ -214,6 +370,8 @@ export default function App() {
               transactions={statement.transactions}
               currency={statement.currency}
               categories={customCategories}
+              onSelectMonth={handleFetchMonthData}
+              metrics={statement.metrics}
             />
           )}
 
@@ -239,6 +397,8 @@ export default function App() {
             <InsightsTab
               transactions={statement.transactions}
               currency={statement.currency}
+              aiAnalysis={statement.aiAnalysis}
+              isFetchingAi={isFetchingAi}
             />
           )}
         </div>

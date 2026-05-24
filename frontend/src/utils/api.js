@@ -1,7 +1,7 @@
 // frontend/src/utils/api.js
 // Central API utility — all backend calls go through here
 
-const BASE_URL = "http://localhost:8000/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 // ── Token helpers ──────────────────────────────────────────────
 export const getToken = () => localStorage.getItem("apex_token");
@@ -56,6 +56,33 @@ export const apiLogin = ({ email, password }) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
+  });
+
+// ── Analytics API ──────────────────────────────────────────────
+
+/** Get available analytics months */
+export const apiGetAnalyticsMonths = () =>
+  request("/analytics/months", {
+    headers: authHeader(),
+  });
+
+/** Get analytics for a specific month */
+export const apiGetMonthlyAnalytics = (month) =>
+  request(`/analytics/monthly?month=${month}`, {
+    headers: authHeader(),
+  });
+
+/** Get AI Analysis for a specific month */
+export const apiGetAiAnalysis = (month, regenerate = false) =>
+  request(`/analytics/monthly/ai-analysis?month=${month}&regenerate=${regenerate}`, {
+    method: "POST",
+    headers: authHeader(),
+  });
+
+/** Get all transactions */
+export const apiGetTransactions = () =>
+  request("/transactions/", {
+    headers: authHeader(),
   });
 
 // ── Statement API ──────────────────────────────────────────────

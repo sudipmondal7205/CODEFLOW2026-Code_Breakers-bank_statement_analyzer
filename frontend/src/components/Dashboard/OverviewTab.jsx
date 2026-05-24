@@ -1,20 +1,36 @@
-import React, { useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Calendar, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, Wallet, Calendar, AlertCircle, Clock } from "lucide-react";
+import { apiGetAnalyticsMonths } from "../../utils/api";
 
-export default function OverviewTab({ transactions, currency, categories }) {
+export default function OverviewTab({ transactions, currency, categories, onSelectMonth, metrics }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [availableMonths, setAvailableMonths] = useState([]);
+
+  useEffect(() => {
+    const fetchMonths = async () => {
+      try {
+        const months = await apiGetAnalyticsMonths();
+        setAvailableMonths(months);
+      } catch (err) {
+        console.error("Failed to fetch available months", err);
+      }
+    };
+    fetchMonths();
+  }, []);
 
   // 1. Calculate Totals
-  let totalIncome = 0;
-  let totalExpense = 0;
+  let totalIncome = metrics?.total_income ?? 0;
+  let totalExpense = metrics?.total_expenses ?? 0;
   
-  transactions.forEach(t => {
-    totalIncome += t.credit;
-    totalExpense += t.debit;
-  });
+  if (!metrics || (metrics.total_income === undefined && metrics.total_expenses === undefined)) {
+    transactions.forEach(t => {
+      totalIncome += t.credit;
+      totalExpense += t.debit;
+    });
+  }
 
-  const netSavings = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : 0;
+  const netSavings = metrics?.net_savings ?? (totalIncome - totalExpense);
+  const savingsRate = metrics?.savings_rate_percentage ?? (totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : 0);
   const expenseRatio = totalIncome > 0 ? ((totalExpense / totalIncome) * 100).toFixed(1) : 100;
 
   // 2. Identify Highest Spending Category
@@ -137,6 +153,28 @@ export default function OverviewTab({ transactions, currency, categories }) {
 
   return (
     <div className="tab-pane animate-fade-in">
+      {/* Month Selector */}
+      {availableMonths.length > 0 && (
+        <div className="month-selector glassmorphism-card mb-4 p-4" style={{ marginBottom: "1rem", padding: "1rem", borderRadius: "12px" }}>
+          <div className="flex items-center gap-2 mb-2" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <Clock size={18} className="text-indigo" />
+            <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 600 }}>Transaction History</h3>
+          </div>
+          <div className="flex flex-wrap gap-2" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {availableMonths.map((month) => (
+              <button
+                key={month}
+                onClick={() => onSelectMonth(month)}
+                className="btn btn-outline"
+                style={{ padding: "0.4rem 1rem", borderRadius: "20px", fontSize: "0.9rem" }}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 4 KPI Metrics Grid */}
       <div className="metrics-grid">
         <div className="metric-card glassmorphism-card">
@@ -163,7 +201,7 @@ export default function OverviewTab({ transactions, currency, categories }) {
 
         <div className="metric-card glassmorphism-card">
           <div className="metric-header">
-            <span className="metric-label">Net Balance</span>
+            <span className="metric-label">Net Savings this Month</span>
             <div className="icon-wrap bg-indigo">
               <Wallet size={18} className="text-indigo" />
             </div>

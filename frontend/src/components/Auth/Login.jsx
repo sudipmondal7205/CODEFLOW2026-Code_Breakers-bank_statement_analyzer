@@ -25,11 +25,6 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword })
     }
   };
 
-  const handleDemoLogin = () => {
-    setEmail("demo@apexbank.com");
-    setPassword("DemoPassword123!");
-    setError("");
-  };
 
   return (
     <div className="auth-card card glassmorphism animate-fade-in">
@@ -80,10 +75,6 @@ export default function Login({ onLogin, onSwitchToRegister, onForgotPassword })
           {isLoading ? (
             <span className="spinner-wrapper"><span className="spinner"></span> Signing in...</span>
           ) : "Sign In"}
-        </button>
-
-        <button type="button" onClick={handleDemoLogin} className="btn btn-secondary btn-block mt-2" disabled={isLoading}>
-          Quick Demo Login
         </button>
       </form>
 
