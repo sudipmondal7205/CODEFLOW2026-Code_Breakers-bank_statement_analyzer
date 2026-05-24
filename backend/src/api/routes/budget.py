@@ -16,33 +16,36 @@ class BudgetCreate(BaseModel):
     # remaining_amount: float
 
 
-@router_budget.post("/")
-def create_budget(budget: BudgetCreate, current_user=Depends(get_current_user)):
+
+def create_budget_data(
+    user_id: str,
+    category: str,
+    budget_amount: float,
+    spent_amount: float = 0
+):
 
     budgets_collection = get_budgets_collection()
-    remaining_amount = max(budget.budget_amount - budget.spent_amount, 0)
+
+    remaining_amount = max(
+        budget_amount - spent_amount,
+        0
+    )
 
     budget_data = {
-        "user_id": current_user["id"],
-        "category": budget.category,
-        "budget_amount": budget.budget_amount,
-        "spent_amount": budget.spent_amount,
+        "user_id": user_id,
+        "category": category,
+        "budget_amount": budget_amount,
+        "spent_amount": spent_amount,
         "remaining_amount": remaining_amount,
         "month": datetime.now().strftime("%Y-%m"),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.utcnow()
     }
 
-    try:
-        result = budgets_collection.insert_one(budget_data)
+    result = budgets_collection.insert_one(
+        budget_data
+    )
 
-        return {
-            "success": True,
-            "message": "Budget created successfully",
-            "budget_id": str(result.inserted_id),
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return str(result.inserted_id)
 
 
 @router_budget.get("/")

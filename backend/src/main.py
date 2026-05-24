@@ -11,6 +11,7 @@ from src.services.categorizer import load_categorizer
 import os
 from src.api.profile import router_profile
 from dotenv import load_dotenv
+from src.api.routes.budget import router_budget
 
 
 
@@ -46,3 +47,4 @@ app.include_router(statement_routes.router, prefix="/api/statements", tags=["sta
 app.include_router(transaction_routes.router, prefix="/api/transactions", tags=["transactions"])
 app.include_router(analytics_routes.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(router_profile, prefix="/api/profile", tags=["profile"])
+app.include_router(router_budget)
