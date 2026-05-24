@@ -12,11 +12,13 @@ def serialize_doc(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     doc["id"] = str(doc.pop("_id"))
     return doc
 
+
 def create_statement(statement_data: Dict[str, Any]) -> Dict[str, Any]:
     col = get_statements_collection()
     res = col.insert_one(statement_data)
     doc = col.find_one({"_id": res.inserted_id})
     return serialize_doc(doc)
+
 
 def get_statements_by_user(user_id: str) -> List[Dict[str, Any]]:
     col = get_statements_collection()

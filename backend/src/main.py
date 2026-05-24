@@ -1,6 +1,5 @@
 import joblib
 from fastapi import FastAPI, UploadFile, File, HTTPException
-# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from src.api.routes import auth as auth_routes
@@ -29,4 +28,5 @@ app.add_middleware(
 
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(statement_routes.router, prefix="/api/statements", tags=["statements"])
-
+app.include_router(transaction_routes.router, prefix="/api/transactions", tags=["transactions"])
+app.include_router(router_profile, prefix="/api/profile", tags=["profile"])

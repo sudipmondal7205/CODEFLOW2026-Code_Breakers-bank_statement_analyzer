@@ -36,7 +36,10 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     """Dependency to extract and validate the JWT token, returning the user ID."""
