@@ -39,7 +39,7 @@ def get_statement_by_id(statement_id: str) -> Optional[Dict[str, Any]]:
     return serialize_doc(doc)
 
 
-def update_statement_ai_analysis(statement_id: str, ai_analysis: str) -> Optional[Dict[str, Any]]:
+def update_statement_ai_analysis(statement_id: str, ai_analysis: Any) -> Optional[Dict[str, Any]]:
     col = get_statements_collection()
     try:
         oid = ObjectId(statement_id)

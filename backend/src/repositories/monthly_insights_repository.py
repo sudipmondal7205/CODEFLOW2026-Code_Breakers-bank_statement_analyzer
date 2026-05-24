@@ -15,7 +15,7 @@ def get_monthly_ai_analysis(user_id: str, month: str) -> Optional[Dict[str, Any]
     return {"month": doc["month"], "ai_analysis": doc.get("ai_analysis")}
 
 
-def save_monthly_ai_analysis(user_id: str, month: str, ai_analysis: str) -> Dict[str, Any]:
+def save_monthly_ai_analysis(user_id: str, month: str, ai_analysis: Any) -> Dict[str, Any]:
     col = get_monthly_insights_collection()
     col.update_one(
         {"user_id": user_id, "month": month},

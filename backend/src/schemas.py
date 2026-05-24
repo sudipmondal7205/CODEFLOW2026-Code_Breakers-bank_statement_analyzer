@@ -1,6 +1,6 @@
 # backend/src/schemas.py
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 
@@ -80,9 +80,48 @@ class TransactionResponse(TransactionCreate):
     id: str
     statement_id: str
     user_id: str
+    balance: Optional[str] = '0.0'
 
     class Config:
         from_attributes = True
+
+
+class CategoryDistributionItem(BaseModel):
+    category: str
+    total_amount: float
+    percentage: float
+
+
+class AiInsightItem(BaseModel):
+    title: str
+    description: str
+    severity: Optional[Literal["low", "medium", "high"]] = None
+    category: Optional[str] = None
+
+
+class AiRecommendationItem(BaseModel):
+    title: str
+    description: str
+    category: str
+    priority: Literal["low", "medium", "high"] = "medium"
+    estimated_monthly_savings_inr: Optional[float] = None
+
+
+class StructuredAiAnalysis(BaseModel):
+    """Structured monthly AI insights for rich UI rendering."""
+
+    headline: str = Field(..., description="One-line executive summary")
+    health_assessment: str = Field(
+        ..., description="Short paragraph on overall financial health"
+    )
+    savings_insights: List[AiInsightItem] = Field(default_factory=list)
+    spending_alerts: List[AiInsightItem] = Field(default_factory=list)
+    recommendations: List[AiRecommendationItem] = Field(default_factory=list)
+    action_items: List[str] = Field(
+        default_factory=list,
+        description="Short, imperative next steps",
+    )
+    source: Literal["ai", "fallback", "legacy"] = "ai"
 
 
 class StatementCreate(BaseModel):
@@ -93,7 +132,7 @@ class StatementCreate(BaseModel):
     net_savings: Optional[float] = None
     savings_rate: Optional[float] = None
     health_status: Optional[str] = None
-    ai_analysis: Optional[str] = None
+    ai_analysis: Optional[StructuredAiAnalysis] = None
 
 
 class StatementResponse(StatementCreate):
@@ -116,16 +155,9 @@ class StatementUploadResponse(BaseModel):
     )
 
 
-
-class CategoryDistributionItem(BaseModel):
-    category: str
-    total_amount: float
-    percentage: float
-
-
 class AiAnalysisResponse(BaseModel):
     month: str
-    ai_analysis: str
+    ai_analysis: StructuredAiAnalysis
 
 
 class MonthlyAnalyticsResponse(BaseModel):
@@ -137,7 +169,7 @@ class MonthlyAnalyticsResponse(BaseModel):
     category_breakdown: List[CategoryDistributionItem]
     anomalies: List[dict]
     recurring_payments: List[dict]
-    ai_analysis: Optional[str] = Field(
+    ai_analysis: Optional[StructuredAiAnalysis] = Field(
         default=None,
         description="Cached monthly AI insights, if already generated",
     )

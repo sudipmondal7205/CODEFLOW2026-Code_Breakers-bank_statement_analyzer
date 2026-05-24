@@ -12,7 +12,7 @@ from src.repositories.transaction_repository import (
     get_available_months_for_user,
     get_transactions_by_user_for_month,
 )
-from src.services.ai_advisor import generate_ai_insights
+from src.services.ai_advisor import generate_ai_insights, normalize_ai_analysis
 from src.services.pipeline import FinancialAnalyticsEngine
 
 
@@ -63,7 +63,9 @@ def get_monthly_analytics(user_id: str, year: int, month: int) -> Dict[str, Any]
         "category_breakdown": metrics["category_distribution"],
         "anomalies": anomalies["unusual_large_spikes"],
         "recurring_payments": anomalies["recurring_commitments_detected"],
-        "ai_analysis": cached_ai.get("ai_analysis") if cached_ai else None,
+        "ai_analysis": normalize_ai_analysis(cached_ai.get("ai_analysis"))
+        if cached_ai
+        else None,
     }
 
 
@@ -77,7 +79,10 @@ def get_monthly_ai_analysis_for_user(
             status_code=404,
             detail=f"No AI analysis found for {month_key}. Generate it first via POST /api/analytics/monthly/ai-analysis.",
         )
-    return {"month": month_key, "ai_analysis": cached["ai_analysis"]}
+    return {
+        "month": month_key,
+        "ai_analysis": normalize_ai_analysis(cached["ai_analysis"]),
+    }
 
 
 def generate_and_store_monthly_ai_analysis(
@@ -87,7 +92,10 @@ def generate_and_store_monthly_ai_analysis(
     if not regenerate:
         cached = get_monthly_ai_analysis(user_id, month_key)
         if cached and cached.get("ai_analysis"):
-            return {"month": month_key, "ai_analysis": cached["ai_analysis"]}
+            return {
+                "month": month_key,
+                "ai_analysis": normalize_ai_analysis(cached["ai_analysis"]),
+            }
 
     transactions = get_transactions_by_user_for_month(user_id, year, month)
     if not transactions:
@@ -109,4 +117,7 @@ def generate_and_store_monthly_ai_analysis(
     }
     ai_analysis = generate_ai_insights(analytics["metrics"], anomalies)
     saved = save_monthly_ai_analysis(user_id, month_key, ai_analysis)
-    return {"month": month_key, "ai_analysis": saved["ai_analysis"]}
+    return {
+        "month": month_key,
+        "ai_analysis": normalize_ai_analysis(saved["ai_analysis"]),
+    }
