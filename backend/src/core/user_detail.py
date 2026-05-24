@@ -17,9 +17,17 @@ def serialize_user(user_doc):
     if not user_doc:
         return None
 
-    user_doc = dict(user_doc)      # built-in dict()
-    user_doc["id"] = str(user_doc.pop("_id"))  # str() + pop()
-    
+    user_doc = dict(user_doc)
+
+    user_doc["id"] = str(user_doc.pop("_id"))
+
+    first = user_doc.get("first_name", "")
+    last = user_doc.get("last_name", "")
+
+    user_doc["name"] = f"{first} {last}".strip()
+
+    # user_doc["picture"] = user_doc.get("picture", "")
+
     return user_doc
 
 def get_user_by_id(
@@ -30,7 +38,7 @@ def get_user_by_id(
 
     user_doc = users_col.find_one(
         {
-            "_id": ObjectId(user_id)
+            "_id": str(user_id)
         }
     )
 

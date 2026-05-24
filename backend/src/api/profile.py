@@ -15,6 +15,6 @@ def get_profile(
             "id": current_user["id"],
             "name": current_user.get("name"),
             "email": current_user.get("email"),
-            "picture": current_user.get("picture")
+            # "picture": current_user.get("picture")
         }
     }

@@ -10,6 +10,7 @@ from src.services.ai_advisor import generate_ai_insights
 from starlette.middleware.sessions import SessionMiddleware
 from src.core.database import init_db
 import os
+from src.api.profile import router_profile
 
 load_dotenv()
 
@@ -28,5 +29,4 @@ app.add_middleware(
 
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(statement_routes.router, prefix="/api/statements", tags=["statements"])
-app.include_router(transaction_routes.router, prefix="/api/transactions", tags=["transactions"])
 
