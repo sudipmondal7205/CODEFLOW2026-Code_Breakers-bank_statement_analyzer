@@ -1,11 +1,9 @@
 import os
-# pyrefly: ignore [missing-import]
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 from typing import Any, Union
 from fastapi import Depends, HTTPException, status
-# pyrefly: ignore [missing-import]
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 

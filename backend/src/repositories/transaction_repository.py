@@ -26,3 +26,8 @@ def get_transactions_by_statement(statement_id: str) -> List[Dict[str, Any]]:
     col = get_transactions_collection()
     cursor = col.find({"statement_id": statement_id})
     return [serialize_doc(doc) for doc in cursor]
+
+def get_transactions_by_user(user_id: str) -> List[Dict[str, Any]]:
+    col = get_transactions_collection()
+    cursor = col.find({"user_id": user_id}).sort("_id", -1)
+    return [serialize_doc(doc) for doc in cursor]

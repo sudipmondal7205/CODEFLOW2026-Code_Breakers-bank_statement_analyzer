@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from src.api.routes import auth as auth_routes
 from src.api.routes import statement_routes
+from src.api.routes import transaction_routes
 from src.services.ai_advisor import generate_ai_insights
 from starlette.middleware.sessions import SessionMiddleware
 from src.core.database import init_db
@@ -27,4 +28,5 @@ app.add_middleware(
 
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(statement_routes.router, prefix="/api/statements", tags=["statements"])
+app.include_router(transaction_routes.router, prefix="/api/transactions", tags=["transactions"])
 
