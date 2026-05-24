@@ -5,10 +5,13 @@ from fastapi import HTTPException, status
 from src.schemas import UserCreate, UserLogin
 from src.repositories.user_repository import get_user_by_email, create_user
 from src.core.security import get_password_hash, verify_password
+from src.api.routes.budget import create_budget_data
+
+Budgets_list=['shoping','food','subscriptions','helth']
 
 
 def register_new_user(user_in: UserCreate) -> Dict[str, Any]:
-    
+
     user = get_user_by_email(user_in.email)
     if user:
         raise HTTPException(
@@ -33,6 +36,9 @@ def register_new_user(user_in: UserCreate) -> Dict[str, Any]:
     
     # Save the new user into the repository
     created_user = create_user(user_data)
+    # print("\n\n", created_user)
+    for i in Budgets_list:
+        _=create_budget_data(created_user["id"],i,0,0)
     return created_user
 
 def authenticate_user(user_in: UserLogin) -> Dict[str, Any]:
