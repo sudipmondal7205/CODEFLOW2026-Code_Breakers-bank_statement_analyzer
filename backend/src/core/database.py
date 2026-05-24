@@ -37,3 +37,23 @@ def get_users_collection():
     if users_collection is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
     return users_collection
+
+from src.core.database import get_db
+
+
+def get_budgets_collection():
+    
+    db = get_db()
+
+    budgets_collection = db["budgets"]
+
+    budgets_collection.create_index(
+        [
+            ("user_id", 1),
+            ("category", 1),
+            ("month", 1)
+        ],
+        unique=True
+    )
+
+    return budgets_collection

@@ -10,7 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from src.core.database import init_db
 import os
 from src.api.profile import router_profile
-
+from src.api.routes.budget import router_budget
 load_dotenv()
 
 app = FastAPI(title="Bank Statement NLP Engine", version="1.0")
@@ -30,3 +30,4 @@ app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(statement_routes.router, prefix="/api/statements", tags=["statements"])
 app.include_router(transaction_routes.router, prefix="/api/transactions", tags=["transactions"])
 app.include_router(router_profile, prefix="/api/profile", tags=["profile"])
+app.include_router(router_budget)
