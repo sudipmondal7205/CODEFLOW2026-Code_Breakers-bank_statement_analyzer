@@ -68,6 +68,12 @@ class TransactionCreate(BaseModel):
     amount: float
     transaction_type: str = Field(..., description="'credit' or 'debit'")
     category: str = Field(..., description="Assigned vertical via scikit-learn pipeline")
+    transaction_date: Optional[datetime] = Field(
+        default=None, description="Post date of the transaction"
+    )
+    value_date: Optional[datetime] = Field(
+        default=None, description="Value date of the transaction"
+    )
 
 
 class TransactionResponse(TransactionCreate):
@@ -81,11 +87,12 @@ class TransactionResponse(TransactionCreate):
 
 class StatementCreate(BaseModel):
     filename: str
-    total_income: float
-    total_expenses: float
-    net_savings: float
-    savings_rate: float = Field(..., description="Calculated savings ratio percentage")
-    health_status: str = Field(..., description="HEALTHY, CAUTION, or CRITICAL ALERT")
+    transaction_count: int = 0
+    total_income: Optional[float] = None
+    total_expenses: Optional[float] = None
+    net_savings: Optional[float] = None
+    savings_rate: Optional[float] = None
+    health_status: Optional[str] = None
     ai_analysis: Optional[str] = None
 
 
@@ -98,6 +105,17 @@ class StatementResponse(StatementCreate):
         from_attributes = True
 
 
+class StatementUploadResponse(BaseModel):
+    statement_id: str
+    filename: str
+    upload_date: datetime
+    transactions_imported: int
+    months_present: List[str] = Field(
+        default_factory=list,
+        description="YYYY-MM months found in imported transactions",
+    )
+
+
 
 class CategoryDistributionItem(BaseModel):
     category: str
@@ -106,23 +124,23 @@ class CategoryDistributionItem(BaseModel):
 
 
 class AiAnalysisResponse(BaseModel):
-    statement_id: str
+    month: str
     ai_analysis: str
 
 
-class FullAnalysisPayloadResponse(BaseModel):
-    """
-    The ultimate contract model returned to your frontend team to render 
-    dashboards, Recharts components, and historical data logs.
-    """
-    statement_id: str
-    filename: str
-    upload_date: str
-    metrics: dict = Field(..., description="Contains standard income, expense, and rate objects")
+class MonthlyAnalyticsResponse(BaseModel):
+    month: str = Field(..., description="YYYY-MM")
+    period_start: str
+    period_end: str
+    transaction_count: int
+    metrics: dict = Field(..., description="Income, expenses, savings rate, health status")
     category_breakdown: List[CategoryDistributionItem]
     anomalies: List[dict]
     recurring_payments: List[dict]
-    ai_analysis: Optional[str] = None
+    ai_analysis: Optional[str] = Field(
+        default=None,
+        description="Cached monthly AI insights, if already generated",
+    )
 
 
 AuthResponse.model_rebuild()

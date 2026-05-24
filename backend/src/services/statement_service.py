@@ -1,19 +1,21 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import HTTPException
 from src.parser.parse import get_file
-from src.services.pipeline import FinancialAnalyticsEngine
-from src.services.ai_advisor import generate_ai_insights
-from src.repositories.statement_repository import (
-    create_statement,
-    get_statement_by_id,
-    update_statement_ai_analysis,
-)
-from src.repositories.transaction_repository import (
-    create_transactions,
-    get_transactions_by_statement,
-)
+from src.parser.date_utils import extract_row_dates
+from src.services.categorizer import predict_category
+from src.repositories.statement_repository import create_statement
+from src.repositories.transaction_repository import create_transactions
+
+def _months_from_transactions(transactions: List[Dict[str, Any]]) -> List[str]:
+    months = set()
+    for tx in transactions:
+        dt = tx.get("transaction_date") or tx.get("value_date")
+        if dt:
+            months.add(dt.strftime("%Y-%m"))
+    return sorted(months)
+
 
 def clean_amount(val_str: str) -> float:
     if not val_str:
@@ -41,87 +43,53 @@ def process_uploaded_statement(file_path: str, filename: str, user_id: str) -> D
         
         amount = 0.0
         tx_type = "unknown"
-        category = "General"
-        
+
         if debit_amt > 0:
             amount = debit_amt
             tx_type = "debit"
-            category = "Shopping"  # Default mock category for debits
         elif credit_amt > 0:
             amount = credit_amt
             tx_type = "credit"
-            category = "Salary & Income"  # Default mock category for credits
 
         if amount > 0:
             details = row.get("details", "")
-            transactions.append({
+            category = predict_category(details, tx_type)
+            post_date, value_date = extract_row_dates(row)
+            tx_record = {
                 "raw_narration": details,
-                "clean_merchant": details[:30],  # Mock clean merchant logic
+                "clean_merchant": details[:30],
                 "amount": amount,
                 "transaction_type": tx_type,
                 "category": category,
-                "user_id": user_id
-            })
+                "user_id": user_id,
+                "transaction_date": post_date,
+                "value_date": value_date,
+            }
+            transactions.append(tx_record)
 
     if not transactions:
         raise HTTPException(status_code=400, detail="No valid transactions found in the file.")
 
-
-    metrics = FinancialAnalyticsEngine.calculate_core_metrics(transactions)
-    anomalies = FinancialAnalyticsEngine.detect_anomalies(transactions)
+    months_present = _months_from_transactions(transactions)
 
     statement_data = {
         "user_id": user_id,
         "filename": filename,
-        "total_income": metrics["summary"]["total_income"],
-        "total_expenses": metrics["summary"]["total_expenses"],
-        "net_savings": metrics["summary"]["net_savings"],
-        "savings_rate": metrics["summary"]["savings_rate_percentage"],
-        "health_status": metrics["summary"]["financial_health_status"],
-        "upload_date": datetime.utcnow()
+        "transaction_count": len(transactions),
+        "upload_date": datetime.utcnow(),
     }
     saved_statement = create_statement(statement_data)
     statement_id = saved_statement["id"]
 
     for tx in transactions:
         tx["statement_id"] = statement_id
-    
+
     create_transactions(transactions)
 
     return {
         "statement_id": statement_id,
         "filename": filename,
-        "upload_date": saved_statement["upload_date"].isoformat(),
-        "metrics": metrics["summary"],
-        "category_breakdown": metrics["category_distribution"],
-        "anomalies": anomalies["unusual_large_spikes"],
-        "recurring_payments": anomalies["recurring_commitments_detected"],
-    }
-
-
-def generate_and_store_ai_analysis(statement_id: str, user_id: str) -> Dict[str, Any]:
-    statement = get_statement_by_id(statement_id)
-    if not statement:
-        raise HTTPException(status_code=404, detail="Statement not found")
-    if statement["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this statement")
-
-    if statement.get("ai_analysis"):
-        return {
-            "statement_id": statement_id,
-            "ai_analysis": statement["ai_analysis"],
-        }
-
-    transactions = get_transactions_by_statement(statement_id)
-    if not transactions:
-        raise HTTPException(status_code=400, detail="No transactions found for this statement")
-
-    metrics = FinancialAnalyticsEngine.calculate_core_metrics(transactions)
-    anomalies = FinancialAnalyticsEngine.detect_anomalies(transactions)
-    ai_analysis = generate_ai_insights(metrics["summary"], anomalies)
-
-    updated = update_statement_ai_analysis(statement_id, ai_analysis)
-    return {
-        "statement_id": statement_id,
-        "ai_analysis": updated["ai_analysis"],
+        "upload_date": saved_statement["upload_date"],
+        "transactions_imported": len(transactions),
+        "months_present": months_present,
     }

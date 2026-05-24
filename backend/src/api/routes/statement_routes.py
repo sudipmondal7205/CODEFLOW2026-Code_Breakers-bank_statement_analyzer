@@ -1,22 +1,21 @@
 import os
 import shutil
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from src.services.statement_service import process_uploaded_statement, generate_and_store_ai_analysis
+from src.services.statement_service import process_uploaded_statement
 from src.core.security import get_current_user
-from src.schemas import AiAnalysisResponse
+from src.schemas import StatementUploadResponse
 
 router = APIRouter()
 
 TEMP_DIR = "data"
 
-@router.post("/upload")
+@router.post("/upload", response_model=StatementUploadResponse)
 def upload_statement(
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user)
 ):
     """
-    Endpoint to upload a bank statement document (PDF).
-    It parses the document, calculates metrics, saves to MongoDB, and returns the analysis.
+    Parse and store statement transactions. Use GET /api/analytics/monthly for analysis.
     """
     if not file.filename.endswith(('.pdf', '.csv', '.txt')):
         raise HTTPException(status_code=400, detail="Invalid extension format. Provide a standard document.")
@@ -34,11 +33,3 @@ def upload_statement(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
-
-@router.post("/{statement_id}/ai-analysis", response_model=AiAnalysisResponse)
-def create_ai_analysis(
-    statement_id: str,
-    user_id: str = Depends(get_current_user),
-):
-    """Generate AI analysis for a statement, persist it, and return the result."""
-    return generate_and_store_ai_analysis(statement_id, user_id)
