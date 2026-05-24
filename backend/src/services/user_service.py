@@ -7,7 +7,7 @@ from src.repositories.user_repository import get_user_by_email, create_user
 from src.core.security import get_password_hash, verify_password
 from src.api.routes.budget import create_budget_data
 
-Budgets_list=['shoping','food','subscriptions','helth']
+Budgets_list=['Food','Shopping','Rent','Travel','Subscriptions','EMIs / Loan Payments','Miscellaneous / Others']
 
 
 def register_new_user(user_in: UserCreate) -> Dict[str, Any]:
