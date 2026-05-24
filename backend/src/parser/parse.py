@@ -3,6 +3,7 @@ from typing import List
 # pyrefly: ignore [missing-import]
 from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader
 from pydantic import BaseModel, Field
+from fastapi import HTTPException
 
 from src.core.llm import model
 
@@ -39,6 +40,11 @@ def get_file(path):
         loader = TextLoader(path, encoding='utf-8')
 
     docs = loader.load()
+    if len(docs) > 5:
+            raise HTTPException(
+                status_code=400,
+                detail="PDF cannot contain more than 5 pages"
+            )
     file_text = "\n".join(doc.page_content for doc in docs)
 
     if ext == ".pdf":

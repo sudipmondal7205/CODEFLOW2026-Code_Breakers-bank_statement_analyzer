@@ -10,12 +10,17 @@ from src.core.database import init_db
 from src.services.categorizer import load_categorizer
 import os
 from src.api.profile import router_profile
+from dotenv import load_dotenv
+
+
 
 
 load_dotenv()
 
+FRONTEND_URL=os.getenv('FRONTEND_URL')
 
 app = FastAPI(title="Bank Statement NLP Engine", version="1.0")
+
 
 
 @app.on_event("startup")
@@ -23,6 +28,13 @@ def startup():
     init_db()
     load_categorizer()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.add_middleware(
     SessionMiddleware,
