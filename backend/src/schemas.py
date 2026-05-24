@@ -105,6 +105,11 @@ class CategoryDistributionItem(BaseModel):
     percentage: float
 
 
+class AiAnalysisResponse(BaseModel):
+    statement_id: str
+    ai_analysis: str
+
+
 class FullAnalysisPayloadResponse(BaseModel):
     """
     The ultimate contract model returned to your frontend team to render 

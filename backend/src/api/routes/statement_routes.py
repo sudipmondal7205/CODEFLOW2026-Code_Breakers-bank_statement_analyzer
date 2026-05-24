@@ -1,8 +1,9 @@
 import os
 import shutil
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from src.services.statement_service import process_uploaded_statement
+from src.services.statement_service import process_uploaded_statement, generate_and_store_ai_analysis
 from src.core.security import get_current_user
+from src.schemas import AiAnalysisResponse
 
 router = APIRouter()
 
@@ -32,3 +33,12 @@ def upload_statement(
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+
+@router.post("/{statement_id}/ai-analysis", response_model=AiAnalysisResponse)
+def create_ai_analysis(
+    statement_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Generate AI analysis for a statement, persist it, and return the result."""
+    return generate_and_store_ai_analysis(statement_id, user_id)

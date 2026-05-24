@@ -5,8 +5,15 @@ from fastapi import HTTPException
 from src.parser.parse import get_file
 from src.services.pipeline import FinancialAnalyticsEngine
 from src.services.ai_advisor import generate_ai_insights
-from src.repositories.statement_repository import create_statement
-from src.repositories.transaction_repository import create_transactions
+from src.repositories.statement_repository import (
+    create_statement,
+    get_statement_by_id,
+    update_statement_ai_analysis,
+)
+from src.repositories.transaction_repository import (
+    create_transactions,
+    get_transactions_by_statement,
+)
 
 def clean_amount(val_str: str) -> float:
     if not val_str:
@@ -62,9 +69,6 @@ def process_uploaded_statement(file_path: str, filename: str, user_id: str) -> D
 
     metrics = FinancialAnalyticsEngine.calculate_core_metrics(transactions)
     anomalies = FinancialAnalyticsEngine.detect_anomalies(transactions)
-    
-
-    insights = generate_ai_insights(metrics["summary"], anomalies)
 
     statement_data = {
         "user_id": user_id,
@@ -74,7 +78,6 @@ def process_uploaded_statement(file_path: str, filename: str, user_id: str) -> D
         "net_savings": metrics["summary"]["net_savings"],
         "savings_rate": metrics["summary"]["savings_rate_percentage"],
         "health_status": metrics["summary"]["financial_health_status"],
-        "ai_analysis": insights,
         "upload_date": datetime.utcnow()
     }
     saved_statement = create_statement(statement_data)
@@ -93,5 +96,32 @@ def process_uploaded_statement(file_path: str, filename: str, user_id: str) -> D
         "category_breakdown": metrics["category_distribution"],
         "anomalies": anomalies["unusual_large_spikes"],
         "recurring_payments": anomalies["recurring_commitments_detected"],
-        "ai_analysis": insights
+    }
+
+
+def generate_and_store_ai_analysis(statement_id: str, user_id: str) -> Dict[str, Any]:
+    statement = get_statement_by_id(statement_id)
+    if not statement:
+        raise HTTPException(status_code=404, detail="Statement not found")
+    if statement["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this statement")
+
+    if statement.get("ai_analysis"):
+        return {
+            "statement_id": statement_id,
+            "ai_analysis": statement["ai_analysis"],
+        }
+
+    transactions = get_transactions_by_statement(statement_id)
+    if not transactions:
+        raise HTTPException(status_code=400, detail="No transactions found for this statement")
+
+    metrics = FinancialAnalyticsEngine.calculate_core_metrics(transactions)
+    anomalies = FinancialAnalyticsEngine.detect_anomalies(transactions)
+    ai_analysis = generate_ai_insights(metrics["summary"], anomalies)
+
+    updated = update_statement_ai_analysis(statement_id, ai_analysis)
+    return {
+        "statement_id": statement_id,
+        "ai_analysis": updated["ai_analysis"],
     }
