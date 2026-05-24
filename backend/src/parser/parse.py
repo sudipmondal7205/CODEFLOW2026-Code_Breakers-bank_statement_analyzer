@@ -77,5 +77,5 @@ def get_file(path):
     """
 
     result = structured_llm.invoke(prompt)
-
+    
     return [row.model_dump() for row in result.rows]

@@ -64,6 +64,7 @@ def process_uploaded_statement(file_path: str, filename: str, user_id: str) -> D
                 "user_id": user_id,
                 "transaction_date": post_date,
                 "value_date": value_date,
+                "balance": row.get("balance", ""),
             }
             transactions.append(tx_record)
 
